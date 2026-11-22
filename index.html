@@ -1,0 +1,1496 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="DeepSeek">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0b0d12">
+<title>DeepSeek 手机端</title>
+<style>
+  :root{
+    --bg:#0b0d12; --panel:#131722; --panel-2:#1a2030; --line:#242b3d;
+    --fg:#e7ecf7; --fg-dim:#9aa6bf; --accent:#4d6bfe; --accent-2:#3a55d9;
+    --ok:#39d98a; --warn:#ffb020; --err:#ff5d5d;
+    --radius:14px; --fs:16px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font:var(--fs)/1.55 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    display:flex; flex-direction:column; height:100dvh; overscroll-behavior-y:contain;
+  }
+  header{
+    position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:8px;
+    padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;
+    background:rgba(11,13,18,.92); backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  header .title{font-weight:650; letter-spacing:.2px; margin-right:auto; font-size:17px}
+  .chip{
+    display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 10px;
+    border:1px solid var(--line); border-radius:999px; background:var(--panel);
+    color:var(--fg-dim); font-size:13px; cursor:pointer; white-space:nowrap;
+  }
+  .chip:active{transform:scale(.97)}
+  .chip.on{color:var(--fg); border-color:var(--accent)}
+  .icon-btn{
+    width:34px;height:34px; display:grid; place-items:center; border-radius:10px;
+    border:1px solid var(--line); background:var(--panel); color:var(--fg-dim); font-size:15px; cursor:pointer;
+  }
+  main{
+    flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;
+    padding:14px 12px 6px; display:flex; flex-direction:column; gap:12px;
+  }
+  .empty{margin:auto; text-align:center; color:var(--fg-dim); font-size:14px; line-height:1.9; max-width:32em}
+  .empty b{color:var(--fg); font-weight:600}
+  .row{display:flex; flex-direction:column; gap:6px; max-width:100%}
+  .row.user{align-items:flex-end}
+  .bubble{
+    max-width:92%; padding:10px 13px; border-radius:var(--radius); word-break:break-word;
+    white-space:pre-wrap; overflow-wrap:anywhere;
+  }
+  .row.user .bubble{background:linear-gradient(180deg,var(--accent),var(--accent-2)); color:#fff; border-bottom-right-radius:5px}
+  .row.bot .bubble{background:var(--panel); border:1px solid var(--line); border-bottom-left-radius:5px; max-width:100%; white-space:normal}
+  .bubble.plain{white-space:pre-wrap}
+  .meta{font-size:11.5px; color:var(--fg-dim); display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  .meta button{
+    background:none;border:0;color:var(--fg-dim);font-size:11.5px;padding:0;cursor:pointer;
+    text-decoration:underline; text-underline-offset:2px;
+  }
+  details.think{
+    border:1px dashed var(--line); border-radius:10px; padding:8px 10px; margin-bottom:8px;
+    background:rgba(77,107,254,.06); font-size:13px; color:var(--fg-dim);
+  }
+  details.think summary{cursor:pointer; color:var(--fg-dim); outline:none}
+  details.think .body{margin-top:8px; white-space:pre-wrap; max-height:40vh; overflow:auto; line-height:1.6}
+  .bubble h1,.bubble h2,.bubble h3{margin:.6em 0 .35em; line-height:1.3}
+  .bubble h1{font-size:1.18em} .bubble h2{font-size:1.1em} .bubble h3{font-size:1.04em}
+  .bubble p{margin:.5em 0}
+  .bubble ul,.bubble ol{margin:.45em 0; padding-left:1.35em}
+  .bubble li{margin:.2em 0}
+  .bubble code{background:#0e1320; border:1px solid var(--line); border-radius:6px; padding:.1em .35em; font-size:.9em;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .bubble pre{background:#0e1320; border:1px solid var(--line); border-radius:10px; padding:10px 12px; overflow:auto; margin:.6em 0}
+  .bubble pre code{background:none;border:0;padding:0;font-size:.86em; line-height:1.5}
+  .bubble a{color:#8fa8ff}
+  .bubble hr{border:0;border-top:1px solid var(--line);margin:1em 0}
+  .typing::after{content:"▍"; color:var(--accent); animation:blink 1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .err{
+    border:1px solid rgba(255,93,93,.45); background:rgba(255,93,93,.1); color:#ffb3b3;
+    border-radius:10px; padding:9px 12px; font-size:13px; white-space:pre-wrap;
+  }
+  footer{
+    position:sticky; bottom:0; z-index:6; background:rgba(11,13,18,.96); backdrop-filter:blur(12px);
+    border-top:1px solid var(--line); padding:10px 12px calc(env(safe-area-inset-bottom) + 10px);
+  }
+  .composer{display:flex; align-items:flex-end; gap:8px}
+  textarea{
+    flex:1; resize:none; max-height:34vh; min-height:44px; padding:11px 13px; font-size:16px; line-height:1.45;
+    background:var(--panel); color:var(--fg); border:1px solid var(--line); border-radius:14px; outline:none;
+    font-family:inherit;
+  }
+  textarea:focus{border-color:var(--accent)}
+  .send{
+    flex:0 0 auto; height:44px; min-width:56px; padding:0 16px; border-radius:14px; border:0; cursor:pointer;
+    background:var(--accent); color:#fff; font-size:15px; font-weight:600;
+  }
+  .send:disabled{opacity:.45}
+  .send.stop{background:#7a2230}
+  .hint{font-size:11px; color:var(--fg-dim); margin:6px 2px 0; display:flex; justify-content:space-between; gap:10px}
+  dialog{
+    border:0; padding:0; width:100%; max-width:520px; margin:auto; background:transparent;
+  }
+  dialog::backdrop{background:rgba(0,0,0,.62); backdrop-filter:blur(3px)}
+  .sheet{
+    background:var(--panel); color:var(--fg); border-radius:18px 18px 0 0; padding:18px 16px calc(env(safe-area-inset-bottom) + 18px);
+    border:1px solid var(--line); border-bottom:0; max-height:90dvh; overflow:auto;
+  }
+  @media (min-width:560px){ .sheet{border-radius:18px; border-bottom:1px solid var(--line); margin-bottom:10dvh} }
+  .sheet h2{margin:0 0 4px; font-size:16px}
+  .sheet p.sub{margin:0 0 16px; color:var(--fg-dim); font-size:12.5px; line-height:1.6}
+  label.f{display:block; font-size:12.5px; color:var(--fg-dim); margin:14px 0 6px}
+  .sheet input[type=password],.sheet input[type=text],.sheet select{
+    width:100%; height:44px; padding:0 12px; font-size:16px; border-radius:12px;
+    background:var(--panel-2); color:var(--fg); border:1px solid var(--line); outline:none;
+  }
+  .sheet select{appearance:none}
+  .sheet .tools{display:flex; gap:10px; margin-top:20px}
+  .btn{
+    flex:1; height:46px; border-radius:13px; border:1px solid var(--line); background:var(--panel-2);
+    color:var(--fg); font-size:15px; cursor:pointer;
+  }
+  .btn.primary{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600}
+  .btn.ghost{flex:0 0 auto; padding:0 14px; color:var(--fg-dim)}
+  .sheet textarea{
+    width:100%; box-sizing:border-box; min-height:78px; max-height:34dvh; padding:11px 12px; border-radius:12px;
+    background:var(--panel-2); color:var(--fg); border:1px solid var(--line); outline:none;
+    font-size:13px; line-height:1.55; font-family:inherit; resize:vertical;
+  }
+  .sheet textarea:focus{border-color:var(--accent)}
+  .sec{margin-top:20px; padding-top:6px; border-top:1px solid var(--line)}
+  .sec h3{margin:12px 0 0; font-size:13.5px; font-weight:600}
+  .row2{display:flex; gap:8px; margin-top:10px}
+  .row2 .btn{height:40px; padding:0 8px; font-size:13px}
+  .chk{display:flex; gap:8px; margin-top:12px; font-size:12px; color:var(--fg-dim); line-height:1.55}
+  .chk input{margin:2px 0 0; accent-color:var(--accent); flex:0 0 auto}
+  .file{width:100%;margin:2px 0 0;padding:9px 11px;border:1px solid var(--line);border-radius:12px;background:#0e1320;color:var(--fg-dim);font-size:12.5px}
+  .file::file-selector-button{margin-right:10px;padding:6px 12px;border:1px solid var(--line);border-radius:9px;background:#1a2133;color:var(--fg);font-size:12.5px}
+  .note{font-size:11.5px; color:var(--fg-dim); margin-top:12px; line-height:1.7}
+  .note code{background:#0e1320;border:1px solid var(--line);border-radius:5px;padding:0 .3em}
+  /* ---------- 侧栏：分区 + 会话列表 ---------- */
+  .scrim{
+    position:fixed; inset:0; z-index:40; background:rgba(0,0,0,.45);
+    opacity:0; pointer-events:none; transition:opacity .18s ease;
+  }
+  .scrim.on{opacity:1; pointer-events:auto}
+  .drawer{
+    position:fixed; top:0; left:0; bottom:0; z-index:50; width:min(86vw, 340px);
+    background:var(--panel); border-right:1px solid var(--line);
+    display:flex; flex-direction:column;
+    transform:translateX(-102%); transition:transform .2s ease;
+    padding-top:calc(env(safe-area-inset-top) + 6px);
+  }
+  .drawer.on{transform:none}
+  .dr-head{display:flex; align-items:center; gap:6px; padding:6px 10px 8px}
+  .dr-head .dr-title{font-weight:650; font-size:15px; margin-right:auto}
+  .dr-search{
+    margin:0 10px 8px; padding:9px 11px; border-radius:10px; border:1px solid var(--line);
+    background:#0e1320; color:var(--fg); font-size:13px; outline:none;
+  }
+  .dr-list{flex:1; overflow-y:auto; padding:0 8px calc(env(safe-area-inset-bottom) + 14px)}
+  .grp{margin-top:6px}
+  .grp-head{
+    display:flex; align-items:center; gap:6px; padding:7px 6px; border-radius:9px;
+    color:var(--fg-dim); font-size:12.5px; cursor:pointer;
+  }
+  .grp-head:active{background:var(--panel-2)}
+  .grp-head .caret{width:12px; display:inline-block; transition:transform .15s ease}
+  .grp-head.collapsed .caret{transform:rotate(-90deg)}
+  .grp-head .name{margin-right:auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .grp-head .cnt{font-size:11px; opacity:.7}
+  .grp-head .more{width:26px; height:26px; display:grid; place-items:center; border-radius:8px; font-size:13px}
+  .grp-head .more:active{background:var(--line)}
+  .conv{
+    display:flex; align-items:center; gap:8px; padding:9px 8px 9px 20px; border-radius:10px;
+    font-size:13.5px; cursor:pointer; color:var(--fg);
+  }
+  .conv:active{background:var(--panel-2)}
+  .conv.on{background:rgba(77,107,254,.16); box-shadow:inset 2px 0 0 var(--accent)}
+  .conv .ct{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .conv .cd{font-size:11px; color:var(--fg-dim); flex:0 0 auto}
+  .conv .more{width:26px; height:26px; display:grid; place-items:center; border-radius:8px; color:var(--fg-dim); flex:0 0 auto}
+  .conv .more:active{background:var(--line)}
+  .dr-empty{padding:26px 10px; text-align:center; color:var(--fg-dim); font-size:12.5px; line-height:1.8}
+  .ask-actions{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px}
+  .ask-actions .btn{flex:1 1 42%; height:42px; padding:0 10px; font-size:13px}
+  #chatTitle{
+    font-weight:650; letter-spacing:.2px; margin-right:auto; font-size:16px;
+    max-width:44vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .badge{font-size:11px; padding:1px 7px; border-radius:999px; border:1px solid var(--line); color:var(--fg-dim)}
+  .badge.ok{color:var(--ok); border-color:rgba(57,217,138,.5)}
+</style>
+</head>
+<body>
+
+<header>
+  <button class="icon-btn" id="menuBtn" title="对话与分区" type="button">☰</button>
+  <span class="title" id="chatTitle">DeepSeek</span>
+  <button class="chip" id="modelChip" type="button"></button>
+  <button class="icon-btn" id="newBtn" title="新对话" type="button">＋</button>
+  <button class="icon-btn" id="setBtn" title="设置" type="button">⚙</button>
+</header>
+
+<main id="list"></main>
+
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <div class="dr-head">
+    <span class="dr-title">分区与对话</span>
+    <button class="icon-btn" id="drNewGroup" title="新建分区" type="button">⊞</button>
+    <button class="icon-btn" id="drNew" title="新对话" type="button">＋</button>
+    <button class="icon-btn" id="drClose" title="关闭" type="button">✕</button>
+  </div>
+  <input class="dr-search" id="drSearch" type="search" placeholder="搜索对话标题或内容" autocorrect="off" spellcheck="false">
+  <div class="dr-list" id="drList"></div>
+</aside>
+<div class="scrim" id="scrim"></div>
+
+<footer>
+  <div class="composer">
+    <textarea id="input" rows="1" placeholder="说点什么…" enterkeyhint="send" autocomplete="off" autocapitalize="sentences"></textarea>
+    <button class="send" id="sendBtn" type="button">发送</button>
+  </div>
+  <div class="hint"><span id="statusLine">就绪</span><span id="tokenLine"></span></div>
+</footer>
+
+<dialog id="dlg">
+  <div class="sheet">
+    <h2>设置</h2>
+    <p class="sub">密钥只存在这台手机的浏览器里（localStorage），请求直连 <b>api.deepseek.com</b>，不经过任何第三方。建议在开放平台新建一把专用 key 并设置额度。</p>
+
+    <label class="f" for="keyInput">API Key（sk-…）</label>
+    <input id="keyInput" type="password" inputmode="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="sk-…">
+    <div class="note">在 <code>platform.deepseek.com/api_keys</code> 创建。丢失或被截图泄露就去后台删掉重建。</div>
+
+    <label class="f" for="modelSelect">模型</label>
+    <select id="modelSelect">
+      <option value="deepseek-flash">deepseek-flash（快、便宜、支持看图）</option>
+      <option value="deepseek-v4-pro">deepseek-v4-pro（更强、不支持看图）</option>
+    </select>
+
+    <label class="f" for="thinkSelect">思考模式</label>
+    <select id="thinkSelect">
+      <option value="default">默认（开启思考，强度 high）</option>
+      <option value="off">关闭（最快，简单问答用）</option>
+      <option value="low">开启 · low</option>
+      <option value="high">开启 · high</option>
+      <option value="max">开启 · max（最慢最贵）</option>
+    </select>
+
+    <label class="f" for="sysInput">系统提示（可留空）</label>
+    <input id="sysInput" type="text" placeholder="例如：回答尽量短，先给结论。" autocomplete="off">
+
+    <div class="chk">
+      <input type="checkbox" id="idChk" checked>
+      <label for="idChk">上面留空时，自动带上身份提示「你是 DeepSeek」。不带的话模型可能自称 ChatGPT / Claude——它没有稳定的自我认知，全靠提示里说清楚。</label>
+    </div>
+
+    <div class="sec">
+      <h3>对话数据</h3>
+      <label class="f" for="ctxInput">每次请求带上多少条历史（越大越贵）</label>
+      <input id="ctxInput" type="number" inputmode="numeric" min="2" max="200" step="2" value="20">
+      <div class="row2">
+        <button class="btn ghost" id="expJson" type="button">导出当前对话</button>
+        <button class="btn ghost" id="expMd" type="button">导出为纯文本</button>
+      </div>
+      <div class="row2">
+        <button class="btn ghost" id="expAll" type="button">导出全部（含分区）</button>
+      </div>
+      <label class="f" for="impFile">从文件导入</label>
+      <input type="file" id="impFile" class="file" accept=".json,.jsonl,.txt,application/json,text/plain">
+      <label class="f" for="impText">或者粘贴内容</label>
+      <textarea id="impText" rows="3" spellcheck="false" placeholder="本页导出的 JSON、OpenAI messages、DeepSeek 官方导出转换出的 JSON，或「我：…」「AI：…」纯文本"></textarea>
+      <div class="row2">
+        <button class="btn ghost" id="impAppend" type="button">追加</button>
+        <button class="btn ghost" id="impReplace" type="button">替换</button>
+      </div>
+      <div class="note" id="dataStatus">导出会复制到剪贴板（桌面浏览器同时下载文件）；导入只认角色字段，工具调用和系统提醒会被丢掉。官方导出的 zip 要先转换。</div>
+    </div>
+
+    <div class="tools">
+      <button class="btn ghost" id="clearChat" type="button">清空对话</button>
+      <button class="btn" id="cancel" type="button">关闭</button>
+      <button class="btn primary" id="save" type="button">保存</button>
+    </div>
+    <div class="note" id="dlgStatus"></div>
+  </div>
+</dialog>
+
+<dialog id="askDlg">
+  <div class="sheet">
+    <h2 id="askTitle">…</h2>
+    <input id="askInput" type="text" autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="ask-actions" id="askActions"></div>
+    <div class="row2"><button class="btn ghost" id="askCancel" type="button">取消</button></div>
+    <div class="note" id="askNote"></div>
+  </div>
+</dialog>
+
+<script>
+(() => {
+  'use strict';
+
+  const API = 'https://api.deepseek.com/chat/completions';
+  const LS = { key: 'ds.key', model: 'ds.model', think: 'ds.think', sys: 'ds.sys', chat: 'ds.chat', id: 'ds.ident', books: 'ds.books', ctx: 'ds.ctx' };
+  const MAX_KEEP = 400;             // 每个对话本地最多存多少条消息
+  const DEF_CTX = 20;               // 每次请求默认带多少条历史
+  const MODELS = ['deepseek-flash', 'deepseek-v4-pro'];
+
+  // 官方 App 里模型不会自称 Claude，是因为官方前端带了身份系统提示。
+  // 我们直连 API 默认什么都没有，模型就按训练语料里最常见的答案（很多来自
+  // Claude / ChatGPT 的对话）回答，纠正也没用——它没有跨轮的记忆锚点。
+  const IDENTITY = '你是 DeepSeek，由深度求索（DeepSeek）训练的大语言模型。'
+    + '被问到身份、开发者或底层模型时，如实回答你是 DeepSeek，不要自称 ChatGPT、Claude、Gemini 或其它公司的模型；'
+    + '如果对话历史里有人这样说过，以本条为准。';
+
+  const $ = (id) => document.getElementById(id);
+  const list = $('list'), input = $('input'), sendBtn = $('sendBtn');
+  const statusLine = $('statusLine'), tokenLine = $('tokenLine');
+  const dlg = $('dlg');
+
+  // 有些环境（file:// 本地打开、Safari 无痕、存储被禁用）会直接抛异常，
+  // 兜一层内存存储，保证页面永远能跑起来。
+  const mem = new Map();
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return mem.has(k) ? mem.get(k) : null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch { mem.set(k, v); } },
+    del(k) { try { localStorage.removeItem(k); } catch { mem.delete(k); } },
+  };
+
+  // navigator.clipboard 只在安全上下文（https / localhost）存在；
+  // 用局域网 http 打开时必须退回 execCommand。
+  async function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      try { await navigator.clipboard.writeText(text); return true; } catch { /* 继续走兜底 */ }
+    }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+      document.body.append(ta);
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    } catch { return false; }
+  }
+
+  const state = {
+    key: store.get(LS.key) || '',
+    model: store.get(LS.model) || 'deepseek-flash',
+    think: store.get(LS.think) || 'default',
+    sys: store.get(LS.sys) || '',
+    identity: store.get(LS.id) !== '0',
+    ctx: clampCtx(store.get(LS.ctx)),
+    books: null,               // { groups:[{id,name}], convs:[{id,title,group,msgs,createdAt,updatedAt}], active, collapsed:{} }
+    msgs: [],                  // 当前对话的消息 [{role, content, reasoning?, usage?, err?}]
+    busy: false,
+    ctrl: null,
+    query: '',                 // 侧栏搜索词
+  };
+  if (!MODELS.includes(state.model)) state.model = 'deepseek-flash';
+
+  /* ---------------- 持久化：分区 + 多会话 ---------------- */
+
+  function clampCtx(v) {
+    const n = parseInt(v, 10);
+    if (!isFinite(n)) return DEF_CTX;
+    return Math.min(200, Math.max(2, n));
+  }
+
+  const uid = () => 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+  // 消息在渲染时会挂上 DOM 引用（_row/_bubble…），直接 stringify 会循环引用，
+  // 所以落盘前只留纯数据字段。这个坑以前真踩过：历史永远存不进去。
+  function plainMsg(m) {
+    return {
+      role: m.role,
+      content: m.content,
+      ...(m.reasoning ? { reasoning: m.reasoning } : {}),
+      ...(m.usage ? { usage: m.usage } : {}),
+      ...(m.err ? { err: m.err } : {}),
+      ...(m.ms ? { ms: m.ms } : {}),
+    };
+  }
+
+  function cleanMsgs(arr) {
+    return Array.isArray(arr) ? arr.filter(m => m && typeof m.content === 'string').map(plainMsg) : [];
+  }
+
+  function titleFrom(msgs) {
+    const first = (msgs || []).find(m => m.role === 'user' && m.content && m.content.trim());
+    if (!first) return '';
+    return first.content.trim().replace(/\s+/g, ' ').slice(0, 22);
+  }
+
+  function newConvRecord(group) {
+    return {
+      id: uid(),
+      title: '新对话',
+      group: group || '',
+      msgs: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+  }
+
+  function loadBooks() {
+    let data = null;
+    try {
+      const raw = store.get(LS.books);
+      if (raw) data = JSON.parse(raw);
+    } catch { data = null; }
+
+    const books = {
+      groups: [],
+      convs: [],
+      active: '',
+      collapsed: {},
+    };
+    if (data && typeof data === 'object') {
+      if (Array.isArray(data.groups)) {
+        books.groups = data.groups
+          .filter(g => g && typeof g.name === 'string')
+          .map(g => ({ id: String(g.id || uid()), name: g.name.slice(0, 40) }));
+      }
+      if (Array.isArray(data.convs)) {
+        books.convs = data.convs
+          .filter(c => c && Array.isArray(c.msgs))
+          .map(c => ({
+            id: String(c.id || uid()),
+            title: String(c.title || '新对话').slice(0, 60),
+            group: String(c.group || ''),
+            msgs: cleanMsgs(c.msgs),
+            createdAt: Number(c.createdAt) || Date.now(),
+            updatedAt: Number(c.updatedAt) || Date.now(),
+          }));
+      }
+      if (data.collapsed && typeof data.collapsed === 'object') books.collapsed = data.collapsed;
+      books.active = String(data.active || '');
+    }
+
+    // 老版本只存了一个对话（ds.chat），迁移过来，别让历史白白消失
+    if (!books.convs.length) {
+      let old = [];
+      try {
+        const raw = store.get(LS.chat);
+        old = raw ? cleanMsgs(JSON.parse(raw)) : [];
+      } catch { old = []; }
+      const conv = newConvRecord('');
+      if (old.length) {
+        conv.msgs = old;
+        conv.title = titleFrom(old) || '旧对话';
+        conv.updatedAt = Date.now();
+      }
+      books.convs.push(conv);
+      books.active = conv.id;
+    }
+    if (!books.convs.some(c => c.id === books.active)) books.active = books.convs[0].id;
+    return books;
+  }
+
+  function persistBooks() {
+    try { store.set(LS.books, JSON.stringify(state.books)); } catch {}
+  }
+
+  function convById(id) {
+    return state.books.convs.find(c => c.id === id) || null;
+  }
+  function activeConv() {
+    return convById(state.books.active) || state.books.convs[0] || null;
+  }
+  function syncActiveMsgs() {
+    const c = activeConv();
+    if (c) state.books.active = c.id;
+    state.msgs = c ? c.msgs : [];
+  }
+
+  function saveChat() {
+    const c = activeConv();
+    if (!c) return;
+    c.msgs = state.msgs.slice(-MAX_KEEP).map(plainMsg);
+    c.updatedAt = Date.now();
+    if (!c.title || c.title === '新对话') {
+      const auto = titleFrom(c.msgs);
+      if (auto) c.title = auto;
+    }
+    persistBooks();
+  }
+
+  function createConv(group) {
+    const conv = newConvRecord(group);
+    state.books.convs.unshift(conv);
+    state.books.active = conv.id;
+    state.msgs = conv.msgs;
+    persistBooks();
+    return conv;
+  }
+
+  function switchConv(id) {
+    if (state.busy || id === state.books.active) return;
+    saveChat();
+    if (!convById(id)) return;
+    state.books.active = id;
+    persistBooks();
+    syncActiveMsgs();
+    renderAll();
+    renderTitle();
+    renderDrawer();
+  }
+
+  /* ---------------- Markdown（够用即可，全部先转义） ---------------- */
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  function inline(s) {
+    return s
+      .replace(/`([^`\n]+)`/g, (_, c) => '<code>' + c + '</code>')
+      .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/(^|[\s(])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+      .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+  }
+
+  function md(src) {
+    const lines = esc(src).replace(/\r\n/g, '\n').split('\n');
+    let out = '', inCode = false, codeBuf = [], listType = null, para = [];
+
+    const flushPara = () => {
+      if (para.length) { out += '<p>' + inline(para.join(' ')) + '</p>'; para = []; }
+    };
+    const closeList = () => {
+      if (listType) { out += listType === 'ul' ? '</ul>' : '</ol>'; listType = null; }
+    };
+
+    for (const raw of lines) {
+      const line = raw;
+      if (/^```/.test(line.trim())) {
+        if (inCode) {
+          out += '<pre><code>' + codeBuf.join('\n') + '</code></pre>';
+          inCode = false; codeBuf = [];
+        } else { flushPara(); closeList(); inCode = true; }
+        continue;
+      }
+      if (inCode) { codeBuf.push(line); continue; }
+
+      if (!line.trim()) { flushPara(); closeList(); continue; }
+
+      const h = /^(#{1,3})\s+(.*)$/.exec(line);
+      if (h) { flushPara(); closeList(); out += `<h${h[1].length}>` + inline(h[2]) + `</h${h[1].length}>`; continue; }
+
+      if (/^(-{3,}|\*{3,})$/.test(line.trim())) { flushPara(); closeList(); out += '<hr>'; continue; }
+
+      const ul = /^\s*[-*+]\s+(.*)$/.exec(line);
+      if (ul) {
+        flushPara();
+        if (listType !== 'ul') { closeList(); out += '<ul>'; listType = 'ul'; }
+        out += '<li>' + inline(ul[1]) + '</li>'; continue;
+      }
+      const ol = /^\s*\d+[.)]\s+(.*)$/.exec(line);
+      if (ol) {
+        flushPara();
+        if (listType !== 'ol') { closeList(); out += '<ol>'; listType = 'ol'; }
+        out += '<li>' + inline(ol[1]) + '</li>'; continue;
+      }
+      para.push(line.trim());
+    }
+    if (inCode) out += '<pre><code>' + codeBuf.join('\n') + '</code></pre>';
+    flushPara(); closeList();
+    return out;
+  }
+
+  /* ---------------- 渲染 ---------------- */
+  function scrollDown(force) {
+    const near = list.scrollHeight - list.scrollTop - list.clientHeight < 160;
+    if (force || near) list.scrollTop = list.scrollHeight;
+  }
+
+  function metaText(m) {
+    const bits = [];
+    if (m.usage) {
+      bits.push('↑' + (m.usage.prompt_tokens ?? '?') + ' ↓' + (m.usage.completion_tokens ?? '?'));
+      const hit = m.usage.prompt_cache_hit_tokens;
+      if (hit) bits.push('缓存命中 ' + hit);
+    }
+    if (m.ms) bits.push((m.ms / 1000).toFixed(1) + 's');
+    return bits.join(' · ');
+  }
+
+  function addRow(m, index) {
+    const row = document.createElement('div');
+    row.className = 'row ' + (m.role === 'user' ? 'user' : 'bot');
+
+    if (m.role === 'assistant') {
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      const label = document.createElement('span');
+      label.textContent = 'DeepSeek';
+      meta.append(label);
+
+      const copy = document.createElement('button');
+      copy.type = 'button'; copy.textContent = '复制';
+      copy.onclick = async () => {
+        const ok = await copyText(m.content);
+        copy.textContent = ok ? '已复制' : '长按选中复制';
+        setTimeout(() => { copy.textContent = '复制'; }, 1600);
+      };
+      meta.append(copy);
+
+      const usage = document.createElement('span');
+      usage.textContent = metaText(m);
+      meta.append(usage);
+      row.append(meta);
+    }
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+
+    if (m.role === 'assistant') {
+      if (m.reasoning) {
+        const d = document.createElement('details');
+        d.className = 'think';
+        const sum = document.createElement('summary');
+        sum.textContent = '思考过程';
+        const body = document.createElement('div');
+        body.className = 'body';
+        body.textContent = m.reasoning;
+        d.append(sum, body);
+        bubble.append(d);
+        m._thinkBody = body;
+      }
+      const content = document.createElement('div');
+      content.className = 'md';
+      content.innerHTML = m.content ? md(m.content) : '';
+      bubble.append(content);
+      m._contentEl = content;
+    } else {
+      bubble.textContent = m.content;
+    }
+
+    if (m.err) {
+      const e = document.createElement('div');
+      e.className = 'err';
+      e.textContent = m.err;
+      bubble.append(e);
+    }
+
+    row.append(bubble);
+    list.append(row);
+    m._row = row;
+    m._bubble = bubble;
+    return row;
+  }
+
+  /* ---------------- 侧栏：分区 + 会话列表 ---------------- */
+  const drawer = $('drawer'), scrim = $('scrim'), drList = $('drList');
+  const chatTitle = $('chatTitle');
+  const askDlg = $('askDlg'), askTitle = $('askTitle'), askInput = $('askInput');
+  const askActions = $('askActions'), askCancel = $('askCancel'), askNote = $('askNote');
+  let askResolve = null;
+
+  function el2(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = text;
+    return e;
+  }
+
+  function renderTitle() {
+    const c = activeConv();
+    chatTitle.textContent = c ? (c.title || '新对话') : 'DeepSeek';
+  }
+
+  function openDrawer() {
+    renderDrawer();
+    drawer.classList.add('on');
+    scrim.classList.add('on');
+    drawer.setAttribute('aria-hidden', 'false');
+  }
+  function closeDrawer() {
+    drawer.classList.remove('on');
+    scrim.classList.remove('on');
+    drawer.setAttribute('aria-hidden', 'true');
+  }
+
+  const pad2 = (n) => (n < 10 ? '0' + n : '' + n);
+  function fmtDay(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    if (d.toDateString() === new Date().toDateString()) return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+    return (d.getMonth() + 1) + '/' + d.getDate();
+  }
+
+  function convRow(c) {
+    const row = el2('div', 'conv' + (c.id === state.books.active ? ' on' : ''));
+    row.dataset.id = c.id;
+    row.append(el2('span', 'ct', c.title || '新对话'));
+    row.append(el2('span', 'cd', fmtDay(c.updatedAt)));
+    const more = el2('span', 'more', '⋯');
+    more.onclick = (ev) => { if (ev && ev.stopPropagation) ev.stopPropagation(); convMenu(c); };
+    row.append(more);
+    row.onclick = () => { switchConv(c.id); closeDrawer(); };
+    return row;
+  }
+
+  function renderDrawer() {
+    drList.innerHTML = '';
+    const q = state.query.trim().toLowerCase();
+    const hit = (c) => {
+      if (!q) return true;
+      if ((c.title || '').toLowerCase().includes(q)) return true;
+      return c.msgs.some(m => typeof m.content === 'string' && m.content.toLowerCase().includes(q));
+    };
+    const buckets = [{ id: '', name: '未分区', locked: true }]
+      .concat(state.books.groups.map(g => ({ id: g.id, name: g.name, locked: false })));
+    let shown = 0;
+    buckets.forEach(b => {
+      const items = state.books.convs
+        .filter(c => (c.group || '') === b.id && hit(c))
+        .sort((x, y) => (y.updatedAt || 0) - (x.updatedAt || 0));
+      if (!items.length && (q || !b.id)) return;   // 搜索时隐藏空分区，空的「未分区」始终不显示
+      const key = b.id || '__none';
+      const collapsed = !!state.books.collapsed[key];
+      const grp = el2('div', 'grp');
+      const head = el2('div', 'grp-head' + (collapsed ? ' collapsed' : ''));
+      head.append(el2('span', 'caret', '▾'));
+      head.append(el2('span', 'name', b.name));
+      head.append(el2('span', 'cnt', String(items.length)));
+      head.onclick = () => {
+        state.books.collapsed[key] = !collapsed;
+        persistBooks();
+        renderDrawer();
+      };
+      if (!b.locked) {
+        const gm = el2('span', 'more', '⋯');
+        gm.onclick = (ev) => { if (ev && ev.stopPropagation) ev.stopPropagation(); groupMenu(b); };
+        head.append(gm);
+      }
+      grp.append(head);
+      if (!collapsed) items.forEach(c => grp.append(convRow(c)));
+      drList.append(grp);
+      shown += items.length;
+    });
+    if (!shown) drList.append(el2('div', 'dr-empty', q ? '没找到匹配的对话' : '还没有对话，点右上角 ＋ 新建'));
+  }
+
+  /* ---- 通用弹窗：输入或选择，返回 Promise ---- */
+  function askOpen(opt) {
+    return new Promise((resolve) => {
+      askResolve = resolve;
+      askTitle.textContent = opt.title || '';
+      askNote.textContent = opt.note || '';
+      askActions.innerHTML = '';
+      if (opt.input) {
+        askInput.style.display = '';
+        askInput.value = opt.input.value || '';
+        askInput.placeholder = opt.input.placeholder || '';
+      } else {
+        askInput.style.display = 'none';
+        askInput.value = '';
+      }
+      if (opt.input) {
+        const go = el2('button', 'btn primary', '确定');
+        go.type = 'button';
+        go.onclick = () => askFinish(String(askInput.value || '').trim());
+        askActions.append(go);
+      }
+      (opt.actions || []).forEach(a => {
+        const b = el2('button', 'btn ghost', a.label);
+        b.type = 'button';
+        b.onclick = () => askFinish(a.value);
+        askActions.append(b);
+      });
+      try { askDlg.showModal(); } catch { askDlg.setAttribute('open', ''); }
+    });
+  }
+  function askFinish(v) {
+    try { askDlg.close(); } catch { askDlg.removeAttribute('open'); }
+    const r = askResolve;
+    askResolve = null;
+    if (r) r(v);
+  }
+  askCancel.onclick = () => askFinish(null);
+  askInput.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') { ev.preventDefault(); askFinish(askInput.value.trim()); }
+  });
+
+  async function askText(title, value, placeholder, note) {
+    const v = await askOpen({ title, note, input: { value: value || '', placeholder: placeholder || '' } });
+    if (v === null || v === undefined) return null;
+    const t = String(v).trim();
+    return t || null;
+  }
+
+  async function convMenu(c) {
+    const act = await askOpen({
+      title: '对话',
+      note: c.title,
+      actions: [
+        { label: '重命名', value: 'rename' },
+        { label: '移动到分区', value: 'move' },
+        { label: '导出这个对话', value: 'export' },
+        { label: '删除对话', value: 'del' },
+      ],
+    });
+    if (act === 'rename') {
+      const name = await askText('重命名对话', c.title, '例如：海南大学宣传片');
+      if (name) { c.title = name.slice(0, 60); persistBooks(); renderTitle(); renderDrawer(); }
+    } else if (act === 'move') {
+      const opts = [{ id: '', name: '未分区' }].concat(state.books.groups);
+      const pick = await askOpen({
+        title: '移动到分区',
+        note: c.title,
+        actions: opts.map(g => ({ label: g.name, value: g.id })),
+      });
+      if (pick !== null && pick !== undefined) {
+        c.group = pick;
+        persistBooks();
+        renderDrawer();
+      }
+    } else if (act === 'export') {
+      switchConv(c.id);
+      closeDrawer();
+      exportData('json');
+    } else if (act === 'del') {
+      const sure = await askOpen({
+        title: '删除对话',
+        note: '删除后找不回来：' + c.title,
+        actions: [{ label: '确认删除', value: 1 }],
+      });
+      if (!sure) return;
+      const i = state.books.convs.indexOf(c);
+      if (i >= 0) state.books.convs.splice(i, 1);
+      if (!state.books.convs.length) {
+        createConv('');
+      } else if (state.books.active === c.id) {
+        state.books.active = state.books.convs[0].id;
+        syncActiveMsgs();
+      }
+      persistBooks();
+      renderAll();
+      renderTitle();
+      renderDrawer();
+    }
+  }
+
+  async function groupMenu(b) {
+    const act = await askOpen({
+      title: '分区',
+      note: b.name,
+      actions: [
+        { label: '在此新建对话', value: 'new' },
+        { label: '重命名分区', value: 'rename' },
+        { label: '删除分区', value: 'del' },
+      ],
+    });
+    if (act === 'new') {
+      createConv(b.id);
+      renderAll(); renderTitle(); renderDrawer(); closeDrawer();
+    } else if (act === 'rename') {
+      const name = await askText('重命名分区', b.name, '例如：工作 / 学习 / 项目A');
+      if (name) {
+        const g = state.books.groups.find(x => x.id === b.id);
+        if (g) { g.name = name.slice(0, 40); persistBooks(); renderDrawer(); }
+      }
+    } else if (act === 'del') {
+      const sure = await askOpen({
+        title: '删除分区',
+        note: '分区里的对话会回到「未分区」，不会被删：' + b.name,
+        actions: [{ label: '确认删除分区', value: 1 }],
+      });
+      if (!sure) return;
+      state.books.groups = state.books.groups.filter(g => g.id !== b.id);
+      state.books.convs.forEach(c => { if (c.group === b.id) c.group = ''; });
+      persistBooks();
+      renderDrawer();
+    }
+  }
+
+  async function newGroup() {
+    const name = await askText('新建分区', '', '例如：工作 / 学习 / 项目A');
+    if (!name) return;
+    state.books.groups.push({ id: uid(), name: name.slice(0, 40) });
+    persistBooks();
+    renderDrawer();
+  }
+
+  function renderAll() {
+    list.innerHTML = '';
+    if (!state.msgs.length) {
+      const e = document.createElement('div');
+      e.className = 'empty';
+      e.innerHTML = '<b>直连 DeepSeek API</b><br>密钥与对话都只存在这台手机上。<br>点右上角 ⚙ 填 API Key，然后开始聊。<br><span style="opacity:.7">发图：先用醒图/照片压一下再发？本页暂不支持图片，纯文字版。</span>';
+      list.append(e);
+      return;
+    }
+    state.msgs.forEach((m) => addRow(m));
+    list.scrollTop = list.scrollHeight;
+  }
+
+  function refreshStream(m) {
+    if (m._contentEl) m._contentEl.textContent = m.content;   // 流式阶段先纯文本，收尾再排版
+    if (m._thinkBody) m._thinkBody.textContent = m.reasoning || '';
+    scrollDown(false);
+  }
+
+  /* ---------------- 设置 ---------------- */
+  const modelSelect = $('modelSelect'), thinkSelect = $('thinkSelect');
+  const keyInput = $('keyInput'), sysInput = $('sysInput'), dlgStatus = $('dlgStatus');
+  const impText = $('impText'), dataStatus = $('dataStatus'), idChk = $('idChk');
+
+  function syncChips() {
+    $('modelChip').textContent = state.model === 'deepseek-v4-pro' ? 'v4-pro' : 'flash';
+    $('modelChip').classList.toggle('on', state.model === 'deepseek-v4-pro');
+    $('modelChip').title = '点按切换模型';
+  }
+
+  $('modelChip').onclick = () => {
+    state.model = state.model === 'deepseek-flash' ? 'deepseek-v4-pro' : 'deepseek-flash';
+    store.set(LS.model, state.model);
+    syncChips();
+    statusLine.textContent = '模型：' + state.model;
+  };
+
+  function openSettings() {
+    keyInput.value = state.key;
+    modelSelect.value = state.model;
+    thinkSelect.value = state.think;
+    sysInput.value = state.sys;
+    idChk.checked = state.identity;
+    dataStatus.textContent = '官方 App 导出的 zip 先用 tools/import-history.py 转换；导入只认角色字段。';
+    dlgStatus.textContent = state.key ? '已保存密钥（' + state.key.slice(0, 6) + '…' + state.key.slice(-4) + '）' : '还没有填密钥';
+    dlg.showModal();
+  }
+
+  $('setBtn').onclick = openSettings;
+  $('cancel').onclick = () => dlg.close();
+  dlg.addEventListener('click', (ev) => { if (ev.target === dlg) dlg.close(); });
+
+  $('save').onclick = () => {
+    state.key = keyInput.value.trim();
+    state.model = modelSelect.value;
+    state.think = thinkSelect.value;
+    state.sys = sysInput.value.trim();
+    state.identity = idChk.checked;
+    store.set(LS.key, state.key);
+    store.set(LS.model, state.model);
+    store.set(LS.think, state.think);
+    store.set(LS.sys, state.sys);
+    store.set(LS.id, state.identity ? '1' : '0');
+    syncChips();
+    statusLine.textContent = state.key ? '就绪' : '还没填 API Key';
+    dlg.close();
+  };
+
+  /* ---------------- 导入 / 导出 ---------------- */
+  const roleOf = (v) => {
+    const r = String(v || '').toLowerCase();
+    if (r === 'user' || r === 'human' || r === '我' || r === '用户' || r === 'you') return 'user';
+    if (['assistant', 'ai', 'bot', 'model', 'deepseek', 'gpt', 'claude', '助手'].includes(r)) return 'assistant';
+    return '';
+  };
+
+  function flattenText(c) {
+    if (typeof c === 'string') return c;
+    if (!Array.isArray(c)) return '';
+    return c.map(part => {
+      if (typeof part === 'string') return part;
+      if (part && typeof part.text === 'string') return part.text;
+      return '';
+    }).filter(Boolean).join('\n');
+  }
+
+  // 连续同角色合并：DSH 一个 turn 会被切成多个 step 的 assistant 片段
+  function mergeInto(out, item) {
+    if (!item) return;
+    const body = (item.content || '').trim();
+    if (!body) return;
+    const last = out[out.length - 1];
+    if (last && last.role === item.role) {
+      last.content += '\n\n' + body;
+      if (item.reasoning) last.reasoning = (last.reasoning ? last.reasoning + '\n\n' : '') + item.reasoning.trim();
+      return;
+    }
+    const next = { role: item.role, content: body };
+    if (item.reasoning && item.reasoning.trim()) next.reasoning = item.reasoning.trim();
+    out.push(next);
+  }
+
+  function collector(doc, out) {
+    if (!doc || typeof doc !== 'object') return;
+    if (Array.isArray(doc)) { doc.forEach(d => collector(d, out)); return; }
+    if (doc.type === 'user/message' || doc.type === 'assistant/message') { out.push(doc); return; }
+    const arr = doc.messages || doc.chat || doc.history || doc.conversation;
+    if (Array.isArray(arr)) { arr.forEach(x => collector(x, out)); return; }
+    if (doc.role) out.push(doc);
+  }
+
+  function entryToMsg(e) {
+    if (e.type === 'user/message') {
+      const src = e.data && e.data.source;
+      if (src && src.kind && src.kind !== 'user') return null;     // 时间快照/工作区规则/技能目录
+      return { role: 'user', content: flattenText(e.data && e.data.content) };
+    }
+    if (e.type === 'assistant/message') {
+      const msg = (e.data && e.data.message) || {};
+      const reasoning = Array.isArray(msg.content)
+        ? msg.content.filter(p => p && p.type === 'reasoning' && typeof p.text === 'string').map(p => p.text).join('\n\n')
+        : '';
+      return { role: 'assistant', content: flattenText(msg.content), reasoning: reasoning };
+    }
+    const role = roleOf(e.role);
+    if (!role) return null;
+    const reasoning = typeof e.reasoning === 'string' ? e.reasoning
+      : (typeof e.reasoning_content === 'string' ? e.reasoning_content : '');
+    return { role: role, content: flattenText(e.content), reasoning: reasoning };
+  }
+
+  function fromPlainText(raw) {
+    const out = [];
+    const mine = /^\s*(我|用户|user|human|you)\s*[:：]\s*(.*)$/i;
+    const bots = /^\s*(ai|助手|assistant|bot|deepseek|claude|gpt)\s*[:：]\s*(.*)$/i;
+    let cur = null;
+    raw.replace(/\r\n/g, '\n').split('\n').forEach(line => {
+      const m = line.match(mine), b = line.match(bots);
+      if (m) { cur = { role: 'user', content: m[2] }; out.push(cur); }
+      else if (b) { cur = { role: 'assistant', content: b[2] }; out.push(cur); }
+      else if (cur) cur.content += (cur.content ? '\n' : '') + line;
+    });
+    const merged = [];
+    if (out.length) out.forEach(x => mergeInto(merged, x));
+    else {
+      // 没有任何角色标记：按空行切块，从「我」开始交替
+      const blocks = raw.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
+      blocks.forEach((b, i) => mergeInto(merged, { role: i % 2 ? 'assistant' : 'user', content: b }));
+    }
+    return merged;
+  }
+
+  function parseImport(text) {
+    const raw = (text || '').trim();
+    if (!raw) return [];
+    const docs = [];
+    if (raw[0] === '{' || raw[0] === '[') {
+      try { docs.push(JSON.parse(raw)); } catch { /* 可能是 JSONL */ }
+      if (!docs.length) {
+        raw.split('\n').forEach(line => {
+          const s = line.trim();
+          if (s[0] !== '{') return;
+          try { docs.push(JSON.parse(s)); } catch { /* 跳过 */ }
+        });
+      }
+    }
+    if (docs.length) {
+      const entries = [];
+      docs.forEach(d => collector(d, entries));
+      const merged = [];
+      entries.forEach(e => mergeInto(merged, entryToMsg(e)));
+      if (merged.length) return merged;
+    }
+    return fromPlainText(raw);
+  }
+
+  function stamp() {
+    const d = new Date(), p = (n) => (n < 10 ? '0' + n : '' + n);   // 老 WebView 没有 padStart
+    return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes());
+  }
+
+  function cleanMsgs(arr) {
+    return (arr || state.msgs)
+      .filter(m => m && typeof m.content === 'string' && m.content.trim())
+      .map(m => {
+        const item = { role: m.role, content: m.content };
+        if (m.reasoning) item.reasoning = m.reasoning;
+        return item;
+      });
+  }
+
+  function looksLikeBooks(doc) {
+    return !!doc && typeof doc === 'object' && Array.isArray(doc.conversations);
+  }
+
+  function importBooks(doc) {
+    let added = 0;
+    (Array.isArray(doc.groups) ? doc.groups : []).forEach(g => {
+      const name = g && (g.name || g.title);
+      if (!name) return;
+      if (state.books.groups.some(x => x.name === name)) return;
+      state.books.groups.push({ id: uid(), name: String(name).slice(0, 40) });
+    });
+    const gidOf = (name) => {
+      if (!name) return '';
+      const hit = state.books.groups.find(g => g.name === name);
+      return hit ? hit.id : '';
+    };
+    (doc.conversations || []).forEach(c => {
+      if (!c) return;
+      const msgs = cleanMsgs(Array.isArray(c.messages) ? c.messages : []);
+      if (!msgs.length) return;
+      const rec = newConvRecord(gidOf(c.group));
+      rec.title = String(c.title || titleFrom(msgs) || '导入的对话').slice(0, 60);
+      rec.msgs = msgs;
+      rec.updatedAt = Date.now() - added;
+      state.books.convs.unshift(rec);
+      added++;
+    });
+    if (!added) return 0;
+    state.books.active = state.books.convs[0].id;
+    persistBooks();
+    syncActiveMsgs();
+    renderAll();
+    renderTitle();
+    renderDrawer();
+    return added;
+  }
+
+  function tryBooksImport(raw) {
+    if (!raw || raw.trim()[0] !== '{') return 0;
+    try {
+      const doc = JSON.parse(raw);
+      if (looksLikeBooks(doc)) return importBooks(doc);
+    } catch { /* 不是单个 JSON，走普通解析 */ }
+    return 0;
+  }
+
+  async function exportData(kind) {
+    if (kind === 'all') {
+      const conversations = state.books.convs
+        .map(c => {
+          const g = state.books.groups.find(x => x.id === c.group);
+          return { title: c.title || '', group: g ? g.name : '', messages: cleanMsgs(c.msgs) };
+        })
+        .filter(x => x.messages.length);
+      if (!conversations.length) { dataStatus.textContent = '还没有对话可以导出。'; return; }
+      const text = JSON.stringify({
+        app: 'deepseek-mobile',
+        version: 2,
+        exportedAt: new Date().toISOString(),
+        groups: state.books.groups.map(g => ({ name: g.name })),
+        conversations,
+      }, null, 1);
+      const copied = await copyText(text);
+      try {
+        const url = URL.createObjectURL(new Blob([text], { type: 'application/json;charset=utf-8' }));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'deepseek-all-' + stamp() + '.json';
+        document.body.append(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+      } catch { /* 忽略 */ }
+      dataStatus.textContent = copied
+        ? '已复制 ' + conversations.length + ' 个对话（含分区）到剪贴板。'
+        : '复制被拦住了，内容已填进下面的框。';
+      if (!copied) impText.value = text;
+      return;
+    }
+
+    const msgs = cleanMsgs();
+    if (!msgs.length) { dataStatus.textContent = '当前没有对话可导出。'; return; }
+
+    const text = kind === 'md'
+      ? msgs.map(m => (m.role === 'user' ? '我：' : 'AI：') + m.content).join('\n\n') + '\n'
+      : JSON.stringify({ app: 'deepseek-mobile', version: 1, exportedAt: new Date().toISOString(), model: state.model, messages: msgs }, null, 1);
+
+    const copied = await copyText(text);
+    try {                                   // 桌面/局域网浏览器顺手给个文件；WebView 里静默失败，靠复制兜底
+      const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'deepseek-' + stamp() + (kind === 'md' ? '.txt' : '.json');
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    } catch { /* 忽略 */ }
+
+    if (copied) dataStatus.textContent = '已复制 ' + msgs.length + ' 条到剪贴板（' + (kind === 'md' ? '纯文本' : 'JSON') + '）。';
+    else {
+      impText.value = text;
+      dataStatus.textContent = '复制被拦住了，内容已填进下面的框，长按全选复制。';
+    }
+  }
+
+  function doImport(replace) {
+    const booksGot = tryBooksImport(impText.value);
+    if (!booksGot) {
+      doImportConv(replace);
+      return;
+    }
+    impText.value = '';
+    dataStatus.textContent = '已导入 ' + booksGot + ' 个对话，分区和标题都保留了。';
+  }
+
+  function doImportConv(replace) {
+    const merged = parseImport(impText.value);
+    if (!merged.length) {
+      dataStatus.textContent = '没解析出对话。JSON 需要 messages 数组；纯文本需要「我：/AI：」或空行分段。';
+      return;
+    }
+    if (merged.length > 120) merged.splice(0, merged.length - 120);
+    state.msgs = replace ? merged : state.msgs.concat(merged);
+    saveChat();
+    renderAll();
+    scrollDown(true);
+    impText.value = '';
+    dataStatus.textContent = '已导入 ' + merged.length + ' 条（' + (replace ? '替换' : '追加') + '），关掉设置就能继续聊。';
+  }
+
+  // 从文件导入：浏览器与 App 都走 <input type=file>（App 侧由 MainActivity.onShowFileChooser 提供选择器）
+  function acceptImportedText(name, text) {
+    if (!text) {
+      dataStatus.textContent = '文件是空的，或者读取失败。';
+      return;
+    }
+    if (/\.zip$/i.test(name || '')) {
+      dataStatus.textContent = '这是官方导出的 zip。先在电脑上跑 tools/import-history.py deepseek <zip> --pick N -o chat.json，再把 chat.json 传到手机导入。';
+      return;
+    }
+    const booksGot = tryBooksImport(text);
+    if (booksGot) {
+      impText.value = '';
+      dataStatus.textContent = '《' + (name || '文件') + '》导入 ' + booksGot + ' 个对话（含分区）。';
+      return;
+    }
+    impText.value = text;
+    const got = parseImport(text);
+    if (!got.length) {
+      dataStatus.textContent = '读到了《' + (name || '文件') + '》，' + text.length + ' 字符，但没解析出对话。';
+      return;
+    }
+    const rounds = got.filter((m) => m.role === 'user').length;
+    dataStatus.textContent = '《' + (name || '文件') + '》解析出 ' + got.length + ' 条（' + rounds + ' 轮），点「替换」或「追加」应用。';
+  }
+
+  // App 内的原生选择器选完文件后，由 MainActivity 直接把文本回调到这里
+  window.__dsNativeFile = acceptImportedText;
+
+  $('impFile').onchange = (ev) => {
+    const input = ev.target;
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => acceptImportedText(file.name, String(reader.result || ''));
+    reader.onerror = () => { dataStatus.textContent = '读不了这个文件，换成文本粘贴试试。'; };
+    reader.readAsText(file);
+    input.value = '';
+  };
+
+  $('expJson').onclick = () => exportData('json');
+  $('expMd').onclick = () => exportData('md');
+  $('impAppend').onclick = () => doImport(false);
+  $('impReplace').onclick = () => doImport(true);
+
+  $('newBtn').onclick = () => {
+    if (state.busy) return;
+    createConv('');
+    closeDrawer();
+    renderAll();
+    renderTitle();
+    renderDrawer();
+    statusLine.textContent = '新对话';
+  };
+
+  $('clearChat').onclick = () => {
+    state.msgs = [];
+    saveChat();
+    renderAll();
+    dlg.close();
+    renderDrawer();
+  };
+
+  /* ---------------- 侧栏接线 ---------------- */
+  $('menuBtn').onclick = () => openDrawer();
+  $('drClose').onclick = () => closeDrawer();
+  scrim.onclick = () => closeDrawer();
+  $('drNew').onclick = () => {
+    createConv('');
+    closeDrawer();
+    renderAll();
+    renderTitle();
+    renderDrawer();
+  };
+  $('drNewGroup').onclick = () => newGroup();
+  $('drSearch').oninput = (ev) => { state.query = ev.target.value || ''; renderDrawer(); };
+  $('expAll').onclick = () => exportData('all');
+  $('ctxInput').onchange = (ev) => {
+    state.ctx = clampCtx(ev.target.value);
+    store.set(LS.ctx, state.ctx);
+    ev.target.value = state.ctx;
+    dlgStatus.textContent = '每次会带上最近 ' + state.ctx + ' 条历史。';
+  };
+
+  /* ---------------- 发送 ---------------- */
+  function autoGrow() {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, Math.round(window.innerHeight * 0.34)) + 'px';
+  }
+  input.addEventListener('input', autoGrow);
+
+  input.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter' && !ev.shiftKey) {
+      ev.preventDefault();
+      send();
+    }
+  });
+
+  function systemText() {
+    return state.sys || (state.identity ? IDENTITY : '');
+  }
+
+  function requestBody() {
+    const sys = systemText();
+    const keep = clampCtx(state.ctx);
+    const ctx = state.msgs.slice(-keep);
+    const body = {
+      model: state.model,
+      messages: [
+        ...(sys ? [{ role: 'system', content: sys }] : []),
+        ...ctx
+          .filter(m => !m.err && (m.role !== 'assistant' || (m.content && m.content.trim())))
+          .map(m => ({ role: m.role, content: m.content })),
+      ],
+      stream: true,
+      stream_options: { include_usage: true },
+    };
+    if (state.think === 'off') body.thinking = { type: 'disabled' };
+    else if (state.think !== 'default') body.reasoning_effort = state.think;   // low | high | max
+    return body;
+  }
+
+  const ERR_HINT = {
+    400: '请求格式有问题（多半是参数或上下文超长）',
+    401: '密钥无效或已删除，去设置里重填',
+    402: '账户余额不足，去开放平台充值',
+    422: '参数不合法',
+    429: '触发限流，等几秒再发',
+    500: '服务端错误，稍后重试',
+    503: '服务繁忙，稍后重试',
+  };
+
+  async function send() {
+    if (state.busy) return;
+    const text = input.value.trim();
+    if (!text) return;
+
+    if (!state.key) { openSettings(); return; }
+
+    state.msgs.push({ role: 'user', content: text });
+    input.value = ''; autoGrow();
+    renderAll();
+
+    // 先把请求体定下来，再 push 机器人的空占位；否则会把一条 content 为空的
+    // assistant 消息发给服务端（部分模型会因此答非所问）。
+    const payload = JSON.stringify(requestBody());
+
+    const bot = { role: 'assistant', content: '', reasoning: '', ms: 0 };
+    state.msgs.push(bot);
+    addRow(bot);
+    scrollDown(true);
+
+    state.busy = true;
+    sendBtn.textContent = '停止';
+    sendBtn.classList.add('stop');
+    statusLine.textContent = '思考中…';
+    const t0 = performance.now();
+
+    const ctrl = new AbortController();
+    state.ctrl = ctrl;
+
+    let servedBy = '';        // 服务端自报的模型名，用来识破中转/代理换模型
+    try {
+      const res = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + state.key },
+        body: payload,
+        signal: ctrl.signal,
+      });
+
+      if (!res.ok) {
+        let detail = '';
+        try {
+          const j = await res.json();
+          detail = j?.error?.message || JSON.stringify(j).slice(0, 300);
+        } catch {
+          detail = (await res.text().catch(() => '')).slice(0, 300);
+        }
+        throw new Error('HTTP ' + res.status + ' · ' + (ERR_HINT[res.status] || '请求失败') + (detail ? '\n' + detail : ''));
+      }
+
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      let first = true;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+
+        let nl;
+        while ((nl = buf.indexOf('\n')) >= 0) {
+          const line = buf.slice(0, nl).trim();
+          buf = buf.slice(nl + 1);
+          if (!line.startsWith('data:')) continue;
+          const data = line.slice(5).trim();
+          if (!data) continue;
+          if (data === '[DONE]') continue;
+
+          let chunk;
+          try { chunk = JSON.parse(data); } catch { continue; }
+
+          const choice = chunk.choices && chunk.choices[0];
+          const delta = choice && choice.delta;
+          if (delta) {
+            if (delta.reasoning_content) bot.reasoning += delta.reasoning_content;
+            if (delta.content) {
+              bot.content += delta.content;
+              if (first) { first = false; statusLine.textContent = '生成中…'; }
+            }
+            refreshStream(bot);
+          }
+          if (chunk.usage) bot.usage = chunk.usage;
+          if (chunk.model) servedBy = chunk.model;
+          if (chunk.choices && chunk.choices[0] && chunk.choices[0].finish_reason) bot.finish = chunk.choices[0].finish_reason;
+        }
+      }
+
+      if (!bot.content && !bot.reasoning) {
+        bot.err = '返回为空（可能是内容被过滤，或思考过程被截断）。';
+      } else if (bot.finish === 'length') {
+        bot.err = '输出达到长度上限被截断。';
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        bot.err = '已停止。';
+      } else if (err instanceof TypeError) {
+        bot.err = '网络请求失败（检查是否断网，或该网络是否屏蔽了 api.deepseek.com）。\n' + err.message;
+      } else {
+        bot.err = err.message || String(err);
+      }
+    } finally {
+      bot.ms = performance.now() - t0;
+      state.busy = false;
+      state.ctrl = null;
+      sendBtn.textContent = '发送';
+      sendBtn.classList.remove('stop');
+      statusLine.textContent = bot.err ? '出错'
+        : (servedBy && !servedBy.includes(state.model) && !state.model.includes(servedBy)
+          ? '⚠ 服务端返回的是 ' + servedBy : '就绪');
+      tokenLine.textContent = metaText(bot);
+
+      // 收尾：正式排版 + 重建元信息
+      const idx = state.msgs.indexOf(bot);
+      if (idx >= 0 && bot._row) {
+        const row = bot._row;
+        row.remove();
+        addRow(bot, idx);
+        if (bot.err) scrollDown(true);
+      }
+      if (state.msgs.length > 60) state.msgs.splice(0, state.msgs.length - 60);
+      saveChat();
+      renderTitle();
+      input.focus({ preventScroll: true });
+    }
+  }
+
+  sendBtn.onclick = () => {
+    if (state.busy) {
+      state.ctrl?.abort();
+      return;
+    }
+    send();
+  };
+
+  /* ---------------- 启动 ---------------- */
+  state.books = loadBooks();      // 放到最后：它依赖 uid / newConvRecord 等定义
+  syncActiveMsgs();
+  syncChips();
+  renderTitle();
+  renderAll();
+  if (!state.key) {
+    statusLine.textContent = '先填 API Key';
+    setTimeout(openSettings, 260);
+  }
+  window.addEventListener('online', () => { statusLine.textContent = '网络已恢复'; });
+  window.addEventListener('offline', () => { statusLine.textContent = '已断网'; });
+})();
+</script>
+</body>
+</html>
