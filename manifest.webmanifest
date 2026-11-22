@@ -1,0 +1,16 @@
+{
+  "name": "DeepSeek 手机端",
+  "short_name": "DeepSeek",
+  "description": "直连 DeepSeek API 的手机端聊天页，支持分区、多会话与历史导入导出。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0d12",
+  "theme_color": "#0b0d12",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
